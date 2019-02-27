@@ -27,20 +27,20 @@ type config = int list * Syntax.Stmt.config
 let eval_one (stack, cfg) instr = 
     let (s, i, o) = cfg in
 	match instr with
-			| BINOP op -> (match stack with
-				| x::y::tail -> ((Expr.str_to_op op y x)::tail, cfg)
-				| _ -> failwith "binop")
-			| CONST z -> (z::stack, cfg)
-			| READ -> (match i with
-				| z::tail -> (z::stack, (s, tail, o))
-				| _ -> failwith "read")
-			| WRITE -> (match stack with
-                | z::tail -> (tail, (s, i, o@[z]))
-				| _ -> failwith "write")
-			| LD x -> ((s x)::stack, cfg)
-			| ST x -> (match stack with
-				| z::tail -> (tail, (Expr.update x z s, i, o))
-				| _ -> failwith "st")
+        | BINOP op -> (match stack with
+            | x::y::tail -> ((Expr.str_to_op op y x)::tail, cfg)
+            | _ -> failwith "binop")
+        | CONST z -> (z::stack, cfg)
+        | READ -> (match i with
+            | z::tail -> (z::stack, (s, tail, o))
+            | _ -> failwith "read")
+        | WRITE -> (match stack with
+            | z::tail -> (tail, (s, i, o@[z]))
+            | _ -> failwith "write")
+        | LD x -> ((s x)::stack, cfg)
+        | ST x -> (match stack with
+            | z::tail -> (tail, (Expr.update x z s, i, o))
+            | _ -> failwith "st")
 
 let eval cfg p = List.fold_left eval_one cfg p
 
