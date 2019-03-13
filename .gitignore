@@ -1,6 +1,7 @@
 # temp up to RT
 *.a
 *.o
+*.s
 # other
 *~
 *.cmi

@@ -80,7 +80,65 @@ open SM
    Take an environment, a stack machine program, and returns a pair --- the updated environment and the list
    of x86 instructions
 *)
-let compile _ _ = failwith "Not yet implemented"
+let cmp_suff op = match op with
+    | "<" -> "l"
+    | "<=" -> "le"
+    | ">" -> "g"
+    | ">=" -> "ge"
+    | "==" -> "e"
+    | "!=" -> "ne"
+
+let div_res op = match op with
+    | "/" -> eax
+    | "%" -> edx
+
+let rec compile env prg = match prg with
+    | [] -> env, []
+    | x::xs -> let new_env, code = 
+        (match x with 
+         | CONST x -> let a, env' = env#allocate in env', [Mov (L x, a)]
+         | READ    -> let a, env' = env#allocate in env', [Call "Lread"; Mov (eax, a)]
+         | WRITE   -> let a, env' = env#pop in env', [Push a; Call "Lwrite"; Pop eax]
+         | LD name -> let var_name = env#loc name in 
+                      let a, env'  = env#allocate in
+                      env', [Mov ((M var_name), a)]
+         | ST name -> let var_name  = env#loc name in
+                      let a, env' = (env#global name)#pop in
+                      env', [Mov (a, (M var_name))]
+         | BINOP op ->
+                 let rhs, lhs, env' = env#pop2 in
+                 let binopa s = env'#push lhs, [Binop (s, rhs, lhs)] in
+                 let zero reg = Mov (L 0, reg) in
+                 let compare suff = env'#push lhs, [
+                        zero eax;
+                        Binop("cmp", rhs, lhs); 
+                        Set(suff, "%al"); 
+                        Mov(eax, lhs)] in
+                 match op with
+                    | "+" | "*" | "-"  -> binopa op
+                    | "<"  -> compare "l"
+                    | "<=" -> compare "le"
+                    | ">"  -> compare "g"
+                    | ">=" -> compare "ge"
+                    | "==" -> compare "e"
+                    | "!=" -> compare "ne"
+                    | "&&" | "!!" -> 
+                            let res, env'' = env'#allocate in
+                            env'', [zero eax; zero edx;
+                            Binop("cmp", L 0, lhs); Set("ne", "%al");
+                            Binop("cmp", L 0, rhs); Set("ne", "%dl");
+                            Binop(op, edx, eax); 
+                            Mov (eax, res)]
+                    | "/" | "%" -> 
+                            let res, env'' = env'#allocate in
+                            env'', [Mov (lhs, eax); zero edx; 
+                                Cltd; IDiv rhs; 
+                                Mov (div_res op, res)]
+                    | _ -> failwith ("binop " ^ op)
+                 env', []
+        ) in 
+        let res_env, res_prg = compile new_env xs in 
+        res_env, (code @ res_prg)
 
 (* A set of strings *)           
 module S = Set.Make (String)
