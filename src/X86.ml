@@ -92,7 +92,7 @@ let div_res op = match op with
     | "/" -> eax
     | "%" -> edx
 
-let rec compile env prg = match prg with
+let rec compile' env prg = match prg with
     | [] -> env, []
     | x::xs -> let new_env, code = 
         (match x with 
@@ -137,8 +137,10 @@ let rec compile env prg = match prg with
                     | _ -> failwith ("binop " ^ op)
                  env', []
         ) in 
-        let res_env, res_prg = compile new_env xs in 
+        let res_env, res_prg = compile' new_env xs in 
         res_env, (code @ res_prg)
+
+let compile env _ = env, []
 
 (* A set of strings *)           
 module S = Set.Make (String)
